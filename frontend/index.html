@@ -3,34 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Test</title>
+    <title>Live GPS Tracking</title>
 </head>
 
 <body>
 
     <h1>Live GPS Location</h1>
 
-    <button onclick="getLocation()">Get GPS Location</button>
+    <button onclick="startTracking()">Start GPS Tracking</button>
+    <button onclick="stopTracking()">Stop Tracking</button>
 
-    <p id="status">Click the button to get location.</p>
+    <p id="status">GPS not started</p>
 
     <p>Latitude: <span id="latitude">-</span></p>
     <p>Longitude: <span id="longitude">-</span></p>
     <p>Speed: <span id="speed">-</span></p>
 
     <script>
-        function getLocation() {
+        let watchId = null;
+
+        function startTracking() {
 
             if (!navigator.geolocation) {
                 document.getElementById("status").innerText =
-                    "Geolocation is not supported by this browser.";
+                    "Geolocation is not supported.";
                 return;
             }
 
             document.getElementById("status").innerText =
-                "Getting your location...";
+                "Tracking started...";
 
-            navigator.geolocation.getCurrentPosition(
+            watchId = navigator.geolocation.watchPosition(
+
                 function(position) {
 
                     const latitude = position.coords.latitude;
@@ -38,18 +42,18 @@
                     const speed = position.coords.speed;
 
                     document.getElementById("latitude").innerText =
-                        latitude;
+                        latitude.toFixed(6);
 
                     document.getElementById("longitude").innerText =
-                        longitude;
+                        longitude.toFixed(6);
 
                     document.getElementById("speed").innerText =
                         speed !== null
-                            ? speed.toFixed(2) + " m/s"
+                            ? (speed * 3.6).toFixed(2) + " km/h"
                             : "Not available";
 
                     document.getElementById("status").innerText =
-                        "Location received successfully!";
+                        "GPS tracking active";
                 },
 
                 function(error) {
@@ -64,6 +68,17 @@
                     maximumAge: 0
                 }
             );
+        }
+
+        function stopTracking() {
+
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+
+            document.getElementById("status").innerText =
+                "GPS tracking stopped";
         }
     </script>
 
