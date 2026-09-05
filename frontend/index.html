@@ -8,7 +8,7 @@
 
 <body>
 
-    <h1>Live GPS Location</h1>
+    <h1>Live GPS Tracking</h1>
 
     <button onclick="startTracking()">Start GPS Tracking</button>
     <button onclick="stopTracking()">Stop Tracking</button>
@@ -20,7 +20,12 @@
     <p>Speed: <span id="speed">-</span></p>
 
     <script>
+
         let watchId = null;
+
+        // FastAPI backend
+        const BACKEND_URL = "https://map-matching-project.onrender.com/";
+
 
         function startTracking() {
 
@@ -35,11 +40,16 @@
 
             watchId = navigator.geolocation.watchPosition(
 
-                function(position) {
+                async function(position) {
 
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
-                    const speed = position.coords.speed;
+
+                    let speed = position.coords.speed;
+
+                    if (speed !== null) {
+                        speed = speed * 3.6;
+                    }
 
                     document.getElementById("latitude").innerText =
                         latitude.toFixed(6);
@@ -49,18 +59,51 @@
 
                     document.getElementById("speed").innerText =
                         speed !== null
-                            ? (speed * 3.6).toFixed(2) + " km/h"
+                            ? speed.toFixed(2) + " km/h"
                             : "Not available";
 
-                    document.getElementById("status").innerText =
-                        "GPS tracking active";
+
+                    // Send GPS data to FastAPI
+                    try {
+
+                        const response = await fetch(BACKEND_URL, {
+
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+
+                            body: JSON.stringify({
+                                latitude: latitude,
+                                longitude: longitude,
+                                speed: speed
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        console.log("Backend:", result);
+
+                        document.getElementById("status").innerText =
+                            "GPS sent to backend successfully";
+
+                    } catch (error) {
+
+                        console.error(error);
+
+                        document.getElementById("status").innerText =
+                            "GPS received, but backend connection failed";
+                    }
                 },
+
 
                 function(error) {
 
                     document.getElementById("status").innerText =
-                        "Error: " + error.message;
+                        "GPS Error: " + error.message;
                 },
+
 
                 {
                     enableHighAccuracy: true,
@@ -70,16 +113,20 @@
             );
         }
 
+
         function stopTracking() {
 
             if (watchId !== null) {
+
                 navigator.geolocation.clearWatch(watchId);
+
                 watchId = null;
             }
 
             document.getElementById("status").innerText =
                 "GPS tracking stopped";
         }
+
     </script>
 
 </body>
