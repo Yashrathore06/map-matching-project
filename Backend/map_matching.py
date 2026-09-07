@@ -2,7 +2,14 @@ import math
 import requests
 
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Multiple Overpass servers
+# Agar pehla server fail hota hai to automatically
+# next server try kiya jayega.
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter"
+]
 
 
 HIGHWAY_TYPES = {
@@ -124,6 +131,7 @@ def point_to_segment_distance(
 ):
 
     lat_scale = 111320
+
     lon_scale = 111320 * math.cos(
         math.radians(lat)
     )
@@ -141,6 +149,7 @@ def point_to_segment_distance(
     dy = by - ay
 
     if dx == 0 and dy == 0:
+
         return math.sqrt(
             (px - ax) ** 2 +
             (py - ay) ** 2
@@ -193,6 +202,7 @@ def parse_number(value):
         return None
 
     try:
+
         value = str(value)
 
         number = ""
@@ -201,12 +211,14 @@ def parse_number(value):
 
             if char.isdigit() or char == ".":
                 number += char
+
             elif number:
                 break
 
         return float(number) if number else None
 
     except Exception:
+
         return None
 
 
@@ -217,6 +229,7 @@ def default_lanes(highway_class):
         "trunk",
         "primary"
     }:
+
         return 2.0
 
     return 1.0
@@ -274,18 +287,70 @@ def get_nearest_road(
     out geom;
     """
 
-    response = requests.post(
-        OVERPASS_URL,
-        data=query,
-        headers={
-            "User-Agent": "MapMatchingStudentProject/1.0"
-        },
-        timeout=15
-    )
+    # --------------------------------------------------
+    # Try multiple Overpass servers
+    # --------------------------------------------------
 
-    response.raise_for_status()
+    data = None
+    last_error = None
 
-    data = response.json()
+    for overpass_url in OVERPASS_URLS:
+
+        try:
+
+            print(
+                f"Trying Overpass server: "
+                f"{overpass_url}"
+            )
+
+            response = requests.post(
+                overpass_url,
+                data=query,
+                headers={
+                    "User-Agent":
+                        "MapMatchingStudentProject/1.0"
+                },
+                timeout=20
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            print(
+                f"Overpass server successful: "
+                f"{overpass_url}"
+            )
+
+            break
+
+        except Exception as error:
+
+            print(
+                f"Overpass server failed: "
+                f"{overpass_url}"
+            )
+
+            print(
+                f"Error: {error}"
+            )
+
+            last_error = error
+
+    # --------------------------------------------------
+    # If all Overpass servers failed
+    # --------------------------------------------------
+
+    if data is None:
+
+        raise Exception(
+            f"All Overpass servers failed. "
+            f"Last error: {last_error}"
+        )
+
+    # --------------------------------------------------
+    # Process roads
+    # --------------------------------------------------
 
     roads = []
 
@@ -315,8 +380,16 @@ def get_nearest_road(
             )
         )
 
+    # --------------------------------------------------
+    # No road found
+    # --------------------------------------------------
+
     if not roads:
         return None
+
+    # --------------------------------------------------
+    # Select nearest road
+    # --------------------------------------------------
 
     roads.sort(
         key=lambda item: item[0]
@@ -332,52 +405,88 @@ def get_nearest_road(
         "unknown"
     )
 
+    # --------------------------------------------------
+    # Lanes
+    # --------------------------------------------------
+
     lanes = parse_number(
         tags.get("lanes")
     )
 
     if lanes is None:
+
         lanes = default_lanes(
             highway_class
         )
+
+    # --------------------------------------------------
+    # Maximum speed
+    # --------------------------------------------------
 
     max_speed = parse_number(
         tags.get("maxspeed")
     )
 
     if max_speed is None:
+
         max_speed = default_speed(
             highway_class
         )
 
+    # --------------------------------------------------
+    # Road length
+    # --------------------------------------------------
+
     length = road_length(
         geometry
     )
+
+    # --------------------------------------------------
+    # Road width
+    # --------------------------------------------------
 
     width = parse_number(
         tags.get("width")
     )
 
     if width is None:
+
         width = lanes * 3.5
+
+    # --------------------------------------------------
+    # Curvature
+    # --------------------------------------------------
 
     curvature = calculate_curvature(
         geometry
     )
 
+    # --------------------------------------------------
+    # Final road information
+    # --------------------------------------------------
+
     return {
+
         "road_name": tags.get(
             "name",
             "Unnamed Road"
         ),
+
         "highway_class": highway_class,
+
         "road_type": classify_osm_road(
             highway_class
         ),
+
         "distance": distance,
+
         "road_length": length,
+
         "lanes": lanes,
+
         "max_speed": max_speed,
+
         "road_width": width,
+
         "curvature": curvature
     }
