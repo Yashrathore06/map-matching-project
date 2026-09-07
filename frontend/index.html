@@ -1,133 +1,1007 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live GPS Tracking</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>AI Map Matching System</title>
+
+
+    <!-- Leaflet CSS -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background: #f4f6f8;
+
+            color: #222;
+        }
+
+
+        header {
+
+            background: #1f2937;
+
+            color: white;
+
+            padding: 20px;
+
+            text-align: center;
+        }
+
+
+        header h1 {
+
+            margin: 0 0 8px 0;
+
+            font-size: 26px;
+        }
+
+
+        header p {
+
+            margin: 0;
+
+            font-size: 14px;
+        }
+
+
+        .container {
+
+            max-width: 1100px;
+
+            margin: 20px auto;
+
+            padding: 0 15px;
+        }
+
+
+        .status-card {
+
+            background: white;
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            margin-bottom: 15px;
+
+            box-shadow:
+                0 2px 8px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        .status-row {
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            flex-wrap: wrap;
+
+            gap: 10px;
+        }
+
+
+        .status-item {
+
+            font-weight: bold;
+        }
+
+
+        .online {
+
+            color: green;
+        }
+
+
+        .offline {
+
+            color: red;
+        }
+
+
+        .buttons {
+
+            margin-top: 15px;
+        }
+
+
+        button {
+
+            padding: 10px 18px;
+
+            border: none;
+
+            border-radius: 6px;
+
+            cursor: pointer;
+
+            margin-right: 8px;
+
+            font-size: 14px;
+        }
+
+
+        #startBtn {
+
+            background: #2563eb;
+
+            color: white;
+        }
+
+
+        #stopBtn {
+
+            background: #dc2626;
+
+            color: white;
+        }
+
+
+        .dashboard {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(200px, 1fr)
+                );
+
+            gap: 15px;
+
+            margin-bottom: 15px;
+        }
+
+
+        .card {
+
+            background: white;
+
+            padding: 18px;
+
+            border-radius: 10px;
+
+            box-shadow:
+                0 2px 8px
+                rgba(0, 0, 0, 0.08);
+        }
+
+
+        .card-title {
+
+            font-size: 13px;
+
+            color: #666;
+
+            margin-bottom: 8px;
+        }
+
+
+        .card-value {
+
+            font-size: 20px;
+
+            font-weight: bold;
+        }
+
+
+        .road-result {
+
+            font-size: 24px;
+
+            font-weight: bold;
+
+            text-transform: capitalize;
+        }
+
+
+        #map {
+
+            height: 500px;
+
+            width: 100%;
+
+            border-radius: 10px;
+
+            box-shadow:
+                0 2px 8px
+                rgba(0, 0, 0, 0.1);
+        }
+
+
+        .info {
+
+            margin-top: 15px;
+
+            background: white;
+
+            padding: 15px;
+
+            border-radius: 10px;
+        }
+
+
+        .info p {
+
+            margin: 7px 0;
+        }
+
+
+        @media (max-width: 600px) {
+
+            header h1 {
+
+                font-size: 21px;
+            }
+
+            #map {
+
+                height: 400px;
+            }
+        }
+
+    </style>
+
 </head>
+
 
 <body>
 
-    <h1>Live GPS Tracking</h1>
 
-    <button onclick="startTracking()">Start GPS Tracking</button>
-    <button onclick="stopTracking()">Stop Tracking</button>
+<header>
 
-    <p id="status">GPS not started</p>
+    <h1>AI-Based Map Matching System</h1>
 
-    <p>Latitude: <span id="latitude">-</span></p>
-    <p>Longitude: <span id="longitude">-</span></p>
-    <p>Speed: <span id="speed">-</span></p>
+    <p>
+        Highway / Service Road / Local Road Detection
+    </p>
 
-    <script>
-
-        let watchId = null;
-
-        // FastAPI backend
-        const BACKEND_URL = "https://map-matching-project.onrender.com/";
+</header>
 
 
-        function startTracking() {
-
-            if (!navigator.geolocation) {
-                document.getElementById("status").innerText =
-                    "Geolocation is not supported.";
-                return;
-            }
-
-            document.getElementById("status").innerText =
-                "Tracking started...";
-
-            watchId = navigator.geolocation.watchPosition(
-
-                async function(position) {
-
-                    const latitude = position.coords.latitude;
-                    const longitude = position.coords.longitude;
-
-                    let speed = position.coords.speed;
-
-                    if (speed !== null) {
-                        speed = speed * 3.6;
-                    }
-
-                    document.getElementById("latitude").innerText =
-                        latitude.toFixed(6);
-
-                    document.getElementById("longitude").innerText =
-                        longitude.toFixed(6);
-
-                    document.getElementById("speed").innerText =
-                        speed !== null
-                            ? speed.toFixed(2) + " km/h"
-                            : "Not available";
+<div class="container">
 
 
-                    // Send GPS data to FastAPI
-                    try {
+    <!-- Connection Status -->
 
-                        const response = await fetch(BACKEND_URL, {
+    <div class="status-card">
 
-                            method: "POST",
+        <div class="status-row">
 
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
+            <div class="status-item">
 
-                            body: JSON.stringify({
-                                latitude: latitude,
-                                longitude: longitude,
-                                speed: speed
-                            })
-                        });
+                Backend:
 
-                        const result = await response.json();
+                <span id="backendStatus">
+                    Checking...
+                </span>
 
-                        console.log("Backend:", result);
-
-                        document.getElementById("status").innerText =
-                            "GPS sent to backend successfully";
-
-                    } catch (error) {
-
-                        console.error(error);
-
-                        document.getElementById("status").innerText =
-                            "GPS received, but backend connection failed";
-                    }
-                },
+            </div>
 
 
-                function(error) {
+            <div class="status-item">
 
-                    document.getElementById("status").innerText =
-                        "GPS Error: " + error.message;
-                },
+                GPS:
+
+                <span id="gpsStatus">
+                    Not Started
+                </span>
+
+            </div>
+
+        </div>
 
 
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
+        <div class="buttons">
+
+            <button
+                id="startBtn"
+                onclick="startTracking()"
+            >
+                Start GPS Tracking
+            </button>
+
+
+            <button
+                id="stopBtn"
+                onclick="stopTracking()"
+            >
+                Stop Tracking
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- GPS Dashboard -->
+
+    <div class="dashboard">
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Latitude
+            </div>
+
+            <div
+                class="card-value"
+                id="latitude"
+            >
+                -
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Longitude
+            </div>
+
+            <div
+                class="card-value"
+                id="longitude"
+            >
+                -
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Speed
+            </div>
+
+            <div
+                class="card-value"
+                id="speed"
+            >
+                -
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Road Type
+            </div>
+
+            <div
+                class="road-result"
+                id="roadType"
+            >
+                Waiting...
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                ML Confidence
+            </div>
+
+            <div
+                class="card-value"
+                id="confidence"
+            >
+                -
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Map -->
+
+    <div id="map"></div>
+
+
+    <!-- Road Information -->
+
+    <div class="info">
+
+        <h3>Road Information</h3>
+
+        <p>
+            <b>Road Name:</b>
+            <span id="roadName">-</span>
+        </p>
+
+        <p>
+            <b>OSM Highway Class:</b>
+            <span id="highwayClass">-</span>
+        </p>
+
+        <p>
+            <b>Distance from Road:</b>
+            <span id="roadDistance">-</span>
+        </p>
+
+        <p>
+            <b>Road Length:</b>
+            <span id="roadLength">-</span>
+        </p>
+
+        <p>
+            <b>Lanes:</b>
+            <span id="lanes">-</span>
+        </p>
+
+        <p>
+            <b>Maximum Speed:</b>
+            <span id="maxSpeed">-</span>
+        </p>
+
+        <p>
+            <b>Road Width:</b>
+            <span id="roadWidth">-</span>
+        </p>
+
+        <p>
+            <b>Curvature:</b>
+            <span id="curvature">-</span>
+        </p>
+
+        <p>
+            <b>Last Update:</b>
+            <span id="lastUpdate">-</span>
+        </p>
+
+    </div>
+
+
+</div>
+
+
+<!-- Leaflet JS -->
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script>
+
+
+// ==================================================
+// BACKEND
+// ==================================================
+
+const BACKEND_BASE_URL =
+    "https://map-matching-project.onrender.com";
+
+const BACKEND_URL =
+    BACKEND_BASE_URL + "/gps";
+
+
+// ==================================================
+// MAP
+// ==================================================
+
+const map = L.map("map").setView(
+    [20.5937, 78.9629],
+    5
+);
+
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        attribution:
+            "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+let marker = null;
+
+let watchId = null;
+
+let isSending = false;
+
+let lastSentTime = 0;
+
+
+// ==================================================
+// BACKEND STATUS
+// ==================================================
+
+async function checkBackend() {
+
+    const statusElement =
+        document.getElementById(
+            "backendStatus"
+        );
+
+    try {
+
+        const response =
+            await fetch(
+                BACKEND_BASE_URL +
+                "/health"
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Backend unavailable"
             );
         }
 
 
-        function stopTracking() {
+        statusElement.innerText =
+            "Connected";
 
-            if (watchId !== null) {
+        statusElement.className =
+            "online";
 
-                navigator.geolocation.clearWatch(watchId);
+    }
 
-                watchId = null;
+    catch (error) {
+
+        console.error(error);
+
+        statusElement.innerText =
+            "Disconnected";
+
+        statusElement.className =
+            "offline";
+    }
+}
+
+
+// ==================================================
+// START GPS
+// ==================================================
+
+function startTracking() {
+
+
+    if (!navigator.geolocation) {
+
+        alert(
+            "Geolocation is not supported by this browser."
+        );
+
+        return;
+    }
+
+
+    if (watchId !== null) {
+
+        return;
+    }
+
+
+    document.getElementById(
+        "gpsStatus"
+    ).innerText = "Starting...";
+
+
+    watchId =
+        navigator.geolocation.watchPosition(
+
+            handlePosition,
+
+            handleGPSError,
+
+            {
+
+                enableHighAccuracy: true,
+
+                timeout: 10000,
+
+                maximumAge: 0
             }
+        );
+}
 
-            document.getElementById("status").innerText =
-                "GPS tracking stopped";
+
+// ==================================================
+// GPS POSITION
+// ==================================================
+
+async function handlePosition(
+    position
+) {
+
+
+    const latitude =
+        position.coords.latitude;
+
+
+    const longitude =
+        position.coords.longitude;
+
+
+    let speed =
+        position.coords.speed;
+
+
+    if (speed !== null) {
+
+        speed =
+            speed * 3.6;
+    }
+
+
+    document.getElementById(
+        "latitude"
+    ).innerText =
+        latitude.toFixed(6);
+
+
+    document.getElementById(
+        "longitude"
+    ).innerText =
+        longitude.toFixed(6);
+
+
+    document.getElementById(
+        "speed"
+    ).innerText =
+        speed !== null
+            ? speed.toFixed(2) +
+              " km/h"
+            : "Not available";
+
+
+    document.getElementById(
+        "gpsStatus"
+    ).innerText =
+        "Active";
+
+
+    // ----------------------------------------------
+    // Update map marker
+    // ----------------------------------------------
+
+    const currentPosition = [
+        latitude,
+        longitude
+    ];
+
+
+    if (marker === null) {
+
+        marker =
+            L.marker(
+                currentPosition
+            ).addTo(map);
+
+        map.setView(
+            currentPosition,
+            17
+        );
+
+    }
+
+    else {
+
+        marker.setLatLng(
+            currentPosition
+        );
+
+        map.panTo(
+            currentPosition
+        );
+    }
+
+
+    // ----------------------------------------------
+    // Avoid too many API requests
+    // ----------------------------------------------
+
+    const now =
+        Date.now();
+
+
+    if (
+        isSending ||
+        now - lastSentTime < 4000
+    ) {
+
+        return;
+    }
+
+
+    lastSentTime = now;
+
+    isSending = true;
+
+
+    // ----------------------------------------------
+    // Send GPS to backend
+    // ----------------------------------------------
+
+    try {
+
+        const response =
+            await fetch(
+                BACKEND_URL,
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        latitude:
+                            latitude,
+
+                        longitude:
+                            longitude,
+
+                        speed:
+                            speed
+                    })
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.detail ||
+                "Backend error"
+            );
         }
 
-    </script>
+
+        updateRoadInformation(
+            result
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Backend error:",
+            error
+        );
+
+        document.getElementById(
+            "backendStatus"
+        ).innerText =
+            "Error";
+
+        document.getElementById(
+            "backendStatus"
+        ).className =
+            "offline";
+    }
+
+    finally {
+
+        isSending = false;
+    }
+}
+
+
+// ==================================================
+// UPDATE ROAD DATA
+// ==================================================
+
+function updateRoadInformation(
+    result
+) {
+
+
+    document.getElementById(
+        "backendStatus"
+    ).innerText =
+        "Connected";
+
+    document.getElementById(
+        "backendStatus"
+    ).className =
+        "online";
+
+
+    document.getElementById(
+        "roadType"
+    ).innerText =
+        result.final_classification ||
+        "Unknown";
+
+
+    const confidence =
+        result.final_confidence;
+
+
+    document.getElementById(
+        "confidence"
+    ).innerText =
+        confidence !== undefined
+            ? (
+                confidence * 100
+            ).toFixed(1) + "%"
+            : "-";
+
+
+    if (!result.road) {
+
+        return;
+    }
+
+
+    const road =
+        result.road;
+
+
+    document.getElementById(
+        "roadName"
+    ).innerText =
+        road.name || "-";
+
+
+    document.getElementById(
+        "highwayClass"
+    ).innerText =
+        road.highway_class || "-";
+
+
+    document.getElementById(
+        "roadDistance"
+    ).innerText =
+        road.distance !== undefined
+            ? road.distance + " m"
+            : "-";
+
+
+    document.getElementById(
+        "roadLength"
+    ).innerText =
+        road.length !== undefined
+            ? road.length + " m"
+            : "-";
+
+
+    document.getElementById(
+        "lanes"
+    ).innerText =
+        road.lanes ?? "-";
+
+
+    document.getElementById(
+        "maxSpeed"
+    ).innerText =
+        road.max_speed !== undefined
+            ? road.max_speed + " km/h"
+            : "-";
+
+
+    document.getElementById(
+        "roadWidth"
+    ).innerText =
+        road.width !== undefined
+            ? road.width + " m"
+            : "-";
+
+
+    document.getElementById(
+        "curvature"
+    ).innerText =
+        road.curvature !== undefined
+            ? road.curvature
+            : "-";
+
+
+    document.getElementById(
+        "lastUpdate"
+    ).innerText =
+        new Date().toLocaleTimeString();
+}
+
+
+// ==================================================
+// GPS ERROR
+// ==================================================
+
+function handleGPSError(
+    error
+) {
+
+    document.getElementById(
+        "gpsStatus"
+    ).innerText =
+        "Error";
+
+
+    console.error(
+        "GPS Error:",
+        error
+    );
+}
+
+
+// ==================================================
+// STOP GPS
+// ==================================================
+
+function stopTracking() {
+
+
+    if (watchId !== null) {
+
+        navigator.geolocation.clearWatch(
+            watchId
+        );
+
+        watchId = null;
+    }
+
+
+    document.getElementById(
+        "gpsStatus"
+    ).innerText =
+        "Stopped";
+}
+
+
+// ==================================================
+// INITIAL BACKEND CHECK
+// ==================================================
+
+checkBackend();
+
+setInterval(
+    checkBackend,
+    30000
+);
+
+</script>
+
 
 </body>
+
 </html>
